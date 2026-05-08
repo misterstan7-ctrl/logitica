@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ titulo or "Logística Online" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo">📦</div>
+            <div>
+                <h2>Logística</h2>
+                <span>Painel de Entregas</span>
+            </div>
+        </div>
+
+        <nav>
+            <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
+            <a href="{{ url_for('adicionar') }}">➕ Adicionar Entregas</a>
+            <a href="{{ url_for('adicionar_ids') }}">🆔 Adicionar IDs</a>
+            <a href="{{ url_for('relatorios') }}">📊 Relatórios</a>
+            <a href="{{ url_for('relatorios') }}">💰 Ganhos</a>
+            <a href="{{ url_for('sair') }}">🚪 Sair</a>
+        </nav>
+
+        <div class="meta-box">
+            <div class="trofeu">🏆</div>
+            <strong>Meta Mensal</strong>
+            <small>Acima de 98%</small>
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1>{{ titulo or "Dashboard" }}</h1>
+                <p>Visão geral das entregas</p>
+            </div>
+            <div class="user">
+                <span class="avatar">AD</span>
+                <div>
+                    <strong>Entregador</strong>
+                    <small>Online</small>
+                </div>
+            </div>
+        </header>
+
+        {% with mensagens = get_flashed_messages(with_categories=true) %}
+            {% if mensagens %}
+                <div class="alerts">
+                    {% for categoria, mensagem in mensagens %}
+                        <div class="alert {{ categoria }}">{{ mensagem }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

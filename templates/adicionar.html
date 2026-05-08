@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% set titulo = "Adicionar Entregas" %}
+
+{% block content %}
+<section class="form-page">
+    <div class="panel form-panel">
+        <h3>Registrar pacotes do dia</h3>
+        <p class="muted">Se já existir registro nessa data, o sistema atualiza os valores.</p>
+
+        <form method="POST" class="form">
+            <label>Data</label>
+            <input type="date" name="data" required>
+
+            <label>Pacotes recebidos para distribuir</label>
+            <input type="number" name="recebidos" min="0" required placeholder="Ex: 120">
+
+            <label>Pacotes entregues no dia</label>
+            <input type="number" name="entregues" min="0" required placeholder="Ex: 118">
+
+            <button type="submit">Salvar Pacotes</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

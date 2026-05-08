@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% set titulo = "Relatórios" %}
+
+{% block content %}
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h3>Gerar Relatório</h3>
+            <p class="muted">Escolha o período e exporte em PDF ou Excel.</p>
+        </div>
+    </div>
+
+    <form method="GET" action="{{ url_for('relatorios') }}" class="filters">
+        <div>
+            <label>Período</label>
+            <select name="periodo" id="periodo">
+                <option value="hoje" {{ "selected" if dados.periodo == "hoje" else "" }}>Hoje</option>
+                <option value="semana" {{ "selected" if dados.periodo == "semana" else "" }}>Semana atual</option>
+                <option value="quinzena" {{ "selected" if dados.periodo == "quinzena" else "" }}>Quinzena atual</option>
+                <option value="mes" {{ "selected" if dados.periodo == "mes" else "" }}>Mês atual</option>
+                <option value="personalizado" {{ "selected" if dados.periodo == "personalizado" else "" }}>Personalizado</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Data inicial</label>
+            <input type="date" name="inicio" value="{{ dados.inicio }}">
+        </div>
+
+        <div>
+            <label>Data final</label>
+            <input type="date" name="fim" value="{{ dados.fim }}">
+        </div>
+
+        <button type="submit">Filtrar</button>
+    </form>
+
+    <div class="export-buttons">
+        <a class="export pdf" href="{{ url_for('exportar_pdf', periodo=dados.periodo, inicio=dados.inicio, fim=dados.fim) }}">📄 Baixar PDF</a>
+        <a class="export excel" href="{{ url_for('exportar_excel', periodo=dados.periodo, inicio=dados.inicio, fim=dados.fim) }}">📊 Baixar Excel</a>
+    </div>
+</section>
+
+<section class="cards">
+    <div class="card blue">
+        <span>Recebidos</span>
+        <h2>{{ dados.totais.recebidos }}</h2>
+        <p>{{ dados.inicio }} até {{ dados.fim }}</p>
+    </div>
+
+    <div class="card green">
+        <span>Entregues</span>
+        <h2>{{ dados.totais.entregues }}</h2>
+        <p>{{ dados.totais.valor_normal | moeda }}</p>
+    </div>
+
+    <div class="card cyan">
+        <span>Taxa de Sucesso</span>
+        <h2>{{ dados.totais.taxa | porcentagem }}</h2>
+        <p>Meta acima de 98%</p>
+    </div>
+
+    <div class="card yellow">
+        <span>Bônus</span>
+        <h2>{{ dados.totais.bonus | moeda }}</h2>
+        <p>R$ 0,30 por pacote</p>
+    </div>
+
+    <div class="card purple">
+        <span>Total Geral</span>
+        <h2>{{ dados.totais.total | moeda }}</h2>
+        <p>Valor + bônus</p>
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Registros do período</h3>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Recebidos</th>
+                    <th>Entregues</th>
+                    <th>Taxa</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in dados.linhas %}
+                <tr>
+                    <td>{{ r.data }}</td>
+                    <td>{{ r.recebidos }}</td>
+                    <td>{{ r.entregues }}</td>
+                    <td>{{ r.taxa | porcentagem }}</td>
+                    <td>{{ r.valor | moeda }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">Nenhum registro encontrado nesse período.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

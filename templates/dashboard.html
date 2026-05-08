@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% set titulo = "Dashboard" %}
+
+{% block content %}
+<section class="cards">
+    <div class="card blue">
+        <span>Entregues Hoje</span>
+        <h2>{{ dados.hoje.entregues }}</h2>
+        <p>{{ dados.hoje.valor_normal | moeda }}</p>
+    </div>
+
+    <div class="card green">
+        <span>Entregues Semana</span>
+        <h2>{{ dados.semana.entregues }}</h2>
+        <p>{{ dados.semana.valor_normal | moeda }}</p>
+    </div>
+
+    <div class="card purple">
+        <span>Entregues Quinzena</span>
+        <h2>{{ dados.quinzena.entregues }}</h2>
+        <p>{{ dados.quinzena.valor_normal | moeda }}</p>
+    </div>
+
+    <div class="card yellow">
+        <span>Entregues Mês</span>
+        <h2>{{ dados.mes.entregues }}</h2>
+        <p>{{ dados.mes.valor_normal | moeda }}</p>
+    </div>
+
+    <div class="card cyan">
+        <span>Taxa de Sucesso</span>
+        <h2>{{ dados.taxa_mensal | porcentagem }}</h2>
+        <p>{{ "Meta atingida!" if dados.meta_batida else "Abaixo da meta" }}</p>
+    </div>
+</section>
+
+
+<section class="panel chart-panel">
+    <h3>Desempenho do Mês</h3>
+    <p class="muted">Comparação diária entre pacotes recebidos e entregues.</p>
+    <canvas id="graficoMes" height="110"></canvas>
+</section>
+
+
+<section class="grid">
+    <div class="panel large">
+        <h3>Resumo Financeiro do Mês</h3>
+
+        <div class="finance-row">
+            <span>Valor por pacote entregue</span>
+            <strong>R$ 2,00</strong>
+        </div>
+
+        <div class="finance-row">
+            <span>Total de recebidos</span>
+            <strong>{{ dados.mes.recebidos }}</strong>
+        </div>
+
+        <div class="finance-row">
+            <span>Total de entregues</span>
+            <strong>{{ dados.mes.entregues }}</strong>
+        </div>
+
+        <div class="finance-row">
+            <span>Taxa de sucesso</span>
+            <strong>{{ dados.mes.taxa | porcentagem }}</strong>
+        </div>
+
+        <div class="finance-row">
+            <span>Total normal</span>
+            <strong>{{ dados.mes.valor_normal | moeda }}</strong>
+        </div>
+
+        <div class="finance-row bonus">
+            <span>Bônus R$ 0,30 por pacote</span>
+            <strong>{{ dados.mes.bonus | moeda }}</strong>
+        </div>
+
+        <div class="finance-row total">
+            <span>Total geral</span>
+            <strong>{{ dados.mes.total | moeda }}</strong>
+        </div>
+    </div>
+
+    <div class="panel bonus-card">
+        <div class="big-icon">🏆</div>
+        <h3>Bônus do Mês</h3>
+        <h2>{{ dados.mes.bonus | moeda }}</h2>
+
+        {% if dados.meta_batida %}
+            <p>Parabéns! Você passou de 98% de taxa de sucesso.</p>
+        {% else %}
+            <p>Você precisa passar de 98% para liberar o bônus.</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Últimos Registros</h3>
+        <a href="{{ url_for('adicionar') }}" class="btn-small">+ Adicionar</a>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Recebidos</th>
+                    <th>Entregues</th>
+                    <th>Taxa</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in dados.ultimos %}
+                    {% set taxa = (r.entregues / r.recebidos * 100) if r.recebidos > 0 else 0 %}
+                    <tr>
+                        <td>{{ r.data }}</td>
+                        <td>{{ r.recebidos }}</td>
+                        <td>{{ r.entregues }}</td>
+                        <td>{{ taxa | porcentagem }}</td>
+                        <td>{{ (r.entregues * 2) | moeda }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5">Nenhum registro cadastrado ainda.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+const graficoLabels = {{ dados.grafico.labels | tojson }};
+const graficoRecebidos = {{ dados.grafico.recebidos | tojson }};
+const graficoEntregues = {{ dados.grafico.entregues | tojson }};
+
+const ctx = document.getElementById("graficoMes");
+
+if (ctx) {
+    new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: graficoLabels,
+            datasets: [
+                {
+                    label: "Recebidos",
+                    data: graficoRecebidos,
+                    borderColor: "#3b82f6",
+                    backgroundColor: "rgba(59, 130, 246, 0.15)",
+                    tension: 0.35,
+                    fill: true,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: "Entregues",
+                    data: graficoEntregues,
+                    borderColor: "#22c55e",
+                    backgroundColor: "rgba(34, 197, 94, 0.15)",
+                    tension: 0.35,
+                    fill: true,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: "#e5e7eb"
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: "#9ca3af" },
+                    grid: { color: "rgba(255,255,255,0.06)" }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: "#9ca3af" },
+                    grid: { color: "rgba(255,255,255,0.08)" }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

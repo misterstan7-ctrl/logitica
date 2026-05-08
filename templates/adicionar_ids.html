@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% set titulo = "Adicionar IDs" %}
+
+{% block content %}
+<section class="form-page">
+    <div class="panel form-panel">
+        <h3>Adicionar IDs dos Pacotes</h3>
+        <p class="muted">
+            Cole os IDs dos pacotes do dia. Use um ID por linha.
+        </p>
+
+        <form method="POST" class="form">
+            <label>Data</label>
+            <input type="date" name="data" value="{{ data_selecionada }}" required>
+
+            <label>IDs dos pacotes</label>
+            <textarea
+                name="ids"
+                rows="15"
+                placeholder="Exemplo:&#10;BR123456789&#10;BR987654321&#10;BR555444333"
+                required
+            ></textarea>
+
+            <button type="submit">Salvar IDs</button>
+        </form>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h3>IDs salvos no dia</h3>
+            <p class="muted">
+                Data selecionada: {{ data_selecionada if data_selecionada else "Nenhuma" }}
+            </p>
+        </div>
+
+        <strong>Total: {{ total }}</strong>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID do Pacote</th>
+                    <th>Data</th>
+                    <th>Registrado em</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in ids_salvos %}
+                <tr>
+                    <td>{{ item.codigo }}</td>
+                    <td>{{ item.data }}</td>
+                    <td>{{ item.criado_em }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3">Nenhum ID encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
