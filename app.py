@@ -9,6 +9,8 @@ from database import (
     salvar_ids_pacotes,
     listar_ids_por_data,
     buscar_id_pacote,
+    registrar_historico,
+    listar_historico,
     total_ids_data
 )
 
@@ -143,6 +145,11 @@ def adicionar():
                 recebidos,
                 entregues
             )
+            registrar_historico(
+              "Pacotes",
+              f"Pacotes do dia {data}: recebidos {recebidos}, entregues {entregues}"
+            )
+
 
             flash(
                 "Pacotes salvos com sucesso!",
@@ -277,6 +284,10 @@ def adicionar_ids():
             )
 
         else:
+            registrar_historico(
+              "IDs",
+              f"Adicionados {len(lista_ids)} IDs no dia {data}"
+            )
 
             flash(
                 "IDs adicionados com sucesso!",
@@ -295,6 +306,14 @@ def adicionar_ids():
         total=total
     )
 
+@app.route("/historico")
+def historico():
+    if not login_obrigatorio():
+        return redirect(url_for("login"))
+
+    dados = listar_historico()
+
+    return render_template("historico.html", dados=dados)
 
 # ==========================================
 # RELATORIOS

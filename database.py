@@ -37,6 +37,14 @@ def criar_banco():
             criado_em TEXT NOT NULL
         )
     """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS historico_alteracoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        acao TEXT NOT NULL,
+        descricao TEXT NOT NULL,
+        data_hora TEXT NOT NULL
+    )
+    """)
 
     conn.commit()
     conn.close()
@@ -359,6 +367,37 @@ def buscar_id_pacote(codigo):
         WHERE codigo LIKE ?
         ORDER BY data DESC
     """, (f"%{codigo}%",))
+
+    dados = cur.fetchall()
+    conn.close()
+
+    return dados
+
+def registrar_historico(acao, descricao):
+    conn = conectar()
+    cur = conn.cursor()
+
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cur.execute("""
+        INSERT INTO historico_alteracoes (acao, descricao, data_hora)
+        VALUES (?, ?, ?)
+    """, (acao, descricao, agora))
+
+    conn.commit()
+    conn.close()
+
+
+def listar_historico(limite=100):
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM historico_alteracoes
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limite,))
 
     dados = cur.fetchall()
     conn.close()

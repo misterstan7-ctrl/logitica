@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% set titulo = "Histórico de Alterações" %}
+
+{% block content %}
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h3>Histórico de Alterações</h3>
+            <p class="muted">Registro das ações feitas no painel.</p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Ação</th>
+                    <th>Descrição</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in dados %}
+                <tr>
+                    <td>{{ item.data_hora }}</td>
+                    <td>{{ item.acao }}</td>
+                    <td>{{ item.descricao }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3">Nenhum histórico registrado ainda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
