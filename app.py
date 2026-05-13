@@ -8,6 +8,7 @@ from database import (
     dados_relatorio,
     salvar_ids_pacotes,
     listar_ids_por_data,
+    buscar_id_pacote,
     total_ids_data
 )
 
@@ -161,7 +162,31 @@ def adicionar():
 
     return render_template("adicionar.html")
 
+@app.route("/buscar-id", methods=["GET", "POST"])
+def buscar_id():
+    if not login_obrigatorio():
+        return redirect(url_for("login"))
 
+    resultados = []
+    codigo = ""
+
+    if request.method == "POST":
+        codigo = request.form.get("codigo", "").strip()
+
+        if not codigo:
+            flash("Digite um ID para buscar.", "erro")
+            return redirect(url_for("buscar_id"))
+
+        resultados = buscar_id_pacote(codigo)
+
+        if not resultados:
+            flash("Nenhum pacote encontrado com esse ID.", "erro")
+
+    return render_template(
+        "buscar_id.html",
+        resultados=resultados,
+        codigo=codigo
+    )
 # ==========================================
 # ADICIONAR IDS
 # ==========================================

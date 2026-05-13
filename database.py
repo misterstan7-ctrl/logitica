@@ -348,3 +348,19 @@ def dados_relatorio(periodo="mes", inicio=None, fim=None):
         "totais": totais,
         "linhas": linhas
     }
+
+def buscar_id_pacote(codigo):
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM pacotes_ids
+        WHERE codigo LIKE ?
+        ORDER BY data DESC
+    """, (f"%{codigo}%",))
+
+    dados = cur.fetchall()
+    conn.close()
+
+    return dados
