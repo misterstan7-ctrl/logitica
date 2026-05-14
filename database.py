@@ -1,8 +1,10 @@
-import sqlite3
-from datetime import date, datetime, timedelta
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from datetime import datetime, date, timedelta
 import calendar
 
-DB_NAME = "logistica.db"
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 VALOR_POR_PACOTE = 2.00
 BONUS_POR_PACOTE = 0.30
@@ -10,9 +12,7 @@ META_TAXA = 98.0
 
 
 def conectar():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 
 def criar_banco():
@@ -21,8 +21,8 @@ def criar_banco():
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS entregas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data TEXT NOT NULL UNIQUE,
+            id SERIAL PRIMARY KEY,
+            data TEXT UNIQUE NOT NULL,
             recebidos INTEGER NOT NULL,
             entregues INTEGER NOT NULL,
             criado_em TEXT NOT NULL
@@ -31,22 +31,24 @@ def criar_banco():
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS pacotes_ids (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             data TEXT NOT NULL,
-            codigo TEXT NOT NULL UNIQUE,
+            codigo TEXT UNIQUE NOT NULL,
             criado_em TEXT NOT NULL
         )
     """)
+
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS historico_alteracoes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        acao TEXT NOT NULL,
-        descricao TEXT NOT NULL,
-        data_hora TEXT NOT NULL
-    )
+        CREATE TABLE IF NOT EXISTS historico_alteracoes (
+            id SERIAL PRIMARY KEY,
+            acao TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            data_hora TEXT NOT NULL
+        )
     """)
 
     conn.commit()
+    cur.close()
     conn.close()
 
 
@@ -58,14 +60,15 @@ def salvar_entrega(data, recebidos, entregues):
 
     cur.execute("""
         INSERT INTO entregas (data, recebidos, entregues, criado_em)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(data) DO UPDATE SET
-            recebidos = excluded.recebidos,
-            entregues = excluded.entregues,
-            criado_em = excluded.criado_em
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (data) DO UPDATE SET
+            recebidos = EXCLUDED.recebidos,
+            entregues = EXCLUDED.entregues,
+            criado_em = EXCLUDED.criado_em
     """, (data, recebidos, entregues, agora))
 
     conn.commit()
+    cur.close()
     conn.close()
 
 
@@ -85,13 +88,14 @@ def salvar_ids_pacotes(data, ids):
         try:
             cur.execute("""
                 INSERT INTO pacotes_ids (data, codigo, criado_em)
-                VALUES (?, ?, ?)
+                VALUES (%s, %s, %s)
             """, (data, codigo, agora))
-
-        except sqlite3.IntegrityError:
+        except Exception:
+            conn.rollback()
             erros.append(codigo)
 
     conn.commit()
+    cur.close()
     conn.close()
 
     return erros
@@ -102,12 +106,14 @@ def listar_ids_por_data(data):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT * FROM pacotes_ids
-        WHERE data = ?
+        SELECT *
+        FROM pacotes_ids
+        WHERE data = %s
         ORDER BY id DESC
     """, (data,))
 
     dados = cur.fetchall()
+    cur.close()
     conn.close()
 
     return dados
@@ -118,15 +124,71 @@ def total_ids_data(data):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT COUNT(*) as total
+        SELECT COUNT(*) AS total
         FROM pacotes_ids
-        WHERE data = ?
+        WHERE data = %s
     """, (data,))
 
     total = cur.fetchone()["total"]
+
+    cur.close()
     conn.close()
 
     return total
+
+
+def buscar_id_pacote(codigo):
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM pacotes_ids
+        WHERE codigo ILIKE %s
+        ORDER BY data DESC
+    """, (f"%{codigo}%",))
+
+    dados = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return dados
+
+
+def registrar_historico(acao, descricao):
+    conn = conectar()
+    cur = conn.cursor()
+
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cur.execute("""
+        INSERT INTO historico_alteracoes (acao, descricao, data_hora)
+        VALUES (%s, %s, %s)
+    """, (acao, descricao, agora))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def listar_historico(limite=100):
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM historico_alteracoes
+        ORDER BY id DESC
+        LIMIT %s
+    """, (limite,))
+
+    dados = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return dados
 
 
 def listar_ultimos_registros(limite=10):
@@ -134,14 +196,18 @@ def listar_ultimos_registros(limite=10):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT * FROM entregas
+        SELECT *
+        FROM entregas
         ORDER BY data DESC
-        LIMIT ?
+        LIMIT %s
     """, (limite,))
 
-    registros = cur.fetchall()
+    dados = cur.fetchall()
+
+    cur.close()
     conn.close()
-    return registros
+
+    return dados
 
 
 def buscar_por_periodo(inicio, fim):
@@ -149,14 +215,18 @@ def buscar_por_periodo(inicio, fim):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT * FROM entregas
-        WHERE data BETWEEN ? AND ?
+        SELECT *
+        FROM entregas
+        WHERE data BETWEEN %s AND %s
         ORDER BY data ASC
     """, (inicio, fim))
 
-    registros = cur.fetchall()
+    dados = cur.fetchall()
+
+    cur.close()
     conn.close()
-    return registros
+
+    return dados
 
 
 def calcular_totais(registros, aplicar_bonus_mensal=False, taxa_mensal=0):
@@ -211,16 +281,13 @@ def fim_mes():
 
 def inicio_quinzena():
     hoje = date.today()
-
     if hoje.day <= 15:
         return date(hoje.year, hoje.month, 1).strftime("%Y-%m-%d")
-
     return date(hoje.year, hoje.month, 16).strftime("%Y-%m-%d")
 
 
 def fim_quinzena():
     hoje = date.today()
-
     if hoje.day <= 15:
         return date(hoje.year, hoje.month, 15).strftime("%Y-%m-%d")
 
@@ -229,31 +296,16 @@ def fim_quinzena():
 
 
 def dados_grafico_mes():
-    hoje = date.today()
-    ultimo = calendar.monthrange(hoje.year, hoje.month)[1]
-
-    inicio = date(hoje.year, hoje.month, 1).strftime("%Y-%m-%d")
-    fim = date(hoje.year, hoje.month, ultimo).strftime("%Y-%m-%d")
-
-    registros = buscar_por_periodo(inicio, fim)
-
-    mapa = {}
-
-    for r in registros:
-        dia = int(r["data"].split("-")[2])
-        mapa[dia] = {
-            "recebidos": int(r["recebidos"]),
-            "entregues": int(r["entregues"])
-        }
+    registros = buscar_por_periodo(inicio_mes(), fim_mes())
 
     labels = []
     recebidos = []
     entregues = []
 
-    for dia in range(1, ultimo + 1):
-        labels.append(str(dia).zfill(2))
-        recebidos.append(mapa.get(dia, {}).get("recebidos", 0))
-        entregues.append(mapa.get(dia, {}).get("entregues", 0))
+    for r in registros:
+        labels.append(r["data"])
+        recebidos.append(r["recebidos"])
+        entregues.append(r["entregues"])
 
     return {
         "labels": labels,
@@ -277,11 +329,7 @@ def dados_dashboard():
         "hoje": calcular_totais(registros_hoje),
         "semana": calcular_totais(registros_semana),
         "quinzena": calcular_totais(registros_quinzena),
-        "mes": calcular_totais(
-            registros_mes,
-            aplicar_bonus_mensal=True,
-            taxa_mensal=taxa_mensal
-        ),
+        "mes": calcular_totais(registros_mes, True, taxa_mensal),
         "taxa_mensal": taxa_mensal,
         "ultimos": listar_ultimos_registros(8),
         "grafico": dados_grafico_mes(),
@@ -324,12 +372,7 @@ def dados_relatorio(periodo="mes", inicio=None, fim=None):
 
     totais_sem_bonus = calcular_totais(registros)
     taxa = totais_sem_bonus["taxa"]
-
-    totais = calcular_totais(
-        registros,
-        aplicar_bonus_mensal=True,
-        taxa_mensal=taxa
-    )
+    totais = calcular_totais(registros, True, taxa)
 
     linhas = []
 
@@ -356,50 +399,3 @@ def dados_relatorio(periodo="mes", inicio=None, fim=None):
         "totais": totais,
         "linhas": linhas
     }
-
-def buscar_id_pacote(codigo):
-    conn = conectar()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT *
-        FROM pacotes_ids
-        WHERE codigo LIKE ?
-        ORDER BY data DESC
-    """, (f"%{codigo}%",))
-
-    dados = cur.fetchall()
-    conn.close()
-
-    return dados
-
-def registrar_historico(acao, descricao):
-    conn = conectar()
-    cur = conn.cursor()
-
-    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    cur.execute("""
-        INSERT INTO historico_alteracoes (acao, descricao, data_hora)
-        VALUES (?, ?, ?)
-    """, (acao, descricao, agora))
-
-    conn.commit()
-    conn.close()
-
-
-def listar_historico(limite=100):
-    conn = conectar()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT *
-        FROM historico_alteracoes
-        ORDER BY id DESC
-        LIMIT ?
-    """, (limite,))
-
-    dados = cur.fetchall()
-    conn.close()
-
-    return dados
