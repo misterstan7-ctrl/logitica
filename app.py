@@ -257,7 +257,7 @@ def adicionar_ids():
         cur.execute("""
             SELECT recebidos
             FROM entregas
-            WHERE data = ?
+            WHERE data = %s
         """, (data,))
 
         resultado = cur.fetchone()
