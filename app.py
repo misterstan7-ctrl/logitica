@@ -11,6 +11,12 @@ from database import (
     buscar_id_pacote,
     registrar_historico,
     listar_historico,
+    criar_rota_hoje,
+    hoje_str,
+    buscar_rota_em_curso,
+    finalizar_rota,
+    salvar_pacote_nao_entregue,
+    listar_nao_entregues_por_data,
     total_ids_data
 )
 
@@ -102,6 +108,14 @@ def dashboard():
     )
 
 
+@app.route("/scanner")
+def scanner():
+
+    if not login_obrigatorio():
+        return redirect(url_for("login"))
+
+    return render_template("scanner.html")
+
 # ==========================================
 # ADICIONAR PACOTES
 # ==========================================
@@ -169,6 +183,22 @@ def adicionar():
 
     return render_template("adicionar.html")
 
+@app.route("/scanner/saca")
+def scanner_saca():
+
+    if not login_obrigatorio():
+        return redirect(url_for("login"))
+
+    return render_template("scanner_saca.html")
+
+
+@app.route("/scanner/pacotes")
+def scanner_pacotes():
+
+    if not login_obrigatorio():
+        return redirect(url_for("login"))
+
+    return render_template("scanner_pacotes.html")
 @app.route("/buscar-id", methods=["GET", "POST"])
 def buscar_id():
     if not login_obrigatorio():
@@ -552,6 +582,94 @@ def porcentagem(valor):
         .replace(".", ",")
     )
 
+@app.route("/iniciar-rota", methods=["POST"])
+def iniciar_rota():
+    if not login_obrigatorio():
+        return redirect(url_for("login"))
+
+    recebidos = int(request.form.get("recebidos"))
+    data = hoje_str()
+
+    rota_id = criar_rota_hoje(data, recebidos)
+
+    registrar_historico(
+        "Rota",
+        f"Rota iniciada no dia {data} com {recebidos} pacotes."
+    )
+
+    flash("Rota iniciada com sucesso!", "sucesso")
+    return redirect(url_for("rotas_em_curso"))
+
+
+@app.route("/rotas-em-curso", methods=["GET", "POST"])
+def rotas_em_curso():
+    if not login_obrigatorio():
+        return redirect(url_for("login"))
+
+    rota = buscar_rota_em_curso()
+
+    if request.method == "POST":
+        rota_id = request.form.get("rota_id")
+        entregues = int(request.form.get("entregues"))
+
+        finalizar_rota(rota_id, entregues)
+
+        if rota:
+            salvar_entrega(rota["data"], rota["recebidos"], entregues)
+
+            registrar_historico(
+                "Rota",
+                f"Rota do dia {rota['data']} finalizada. Recebidos: {rota['recebidos']}, entregues: {entregues}."
+            )
+
+        if rota and entregues < int(rota["recebidos"]):
+            flash("Rota finalizada. Agora escaneie os pacotes que voltaram.", "erro")
+            return redirect(url_for("nao_entregues", data=rota["data"], rota_id=rota_id))
+
+        flash("Rota finalizada e dia salvo com sucesso!", "sucesso")
+        return redirect(url_for("dashboard"))
+
+    return render_template("rotas_em_curso.html", rota=rota)
+
+
+@app.route("/nao-entregues", methods=["GET", "POST"])
+def nao_entregues():
+    if not login_obrigatorio():
+        return redirect(url_for("login"))
+
+    data = request.args.get("data", hoje_str())
+    rota_id = request.args.get("rota_id")
+
+    if request.method == "POST":
+        data = request.form.get("data")
+        rota_id = request.form.get("rota_id") or None
+        ids_texto = request.form.get("ids", "")
+
+        lista_ids = [
+            i.strip()
+            for i in ids_texto.splitlines()
+            if i.strip()
+        ]
+
+        for codigo in lista_ids:
+            salvar_pacote_nao_entregue(data, codigo, rota_id)
+
+        registrar_historico(
+            "Não entregues",
+            f"Registrados {len(lista_ids)} pacotes não entregues no dia {data}."
+        )
+
+        flash("Pacotes não entregues salvos com sucesso!", "sucesso")
+        return redirect(url_for("nao_entregues", data=data))
+
+    dados = listar_nao_entregues_por_data(data)
+
+    return render_template(
+        "nao_entregues.html",
+        dados=dados,
+        data=data,
+        rota_id=rota_id
+    )
 
 # ==========================================
 # INICIAR

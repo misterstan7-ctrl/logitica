@@ -1,24 +1,74 @@
 {% extends "base.html" %}
-{% set titulo = "Adicionar Entregas" %}
+{% set titulo = "Adicionar Entrega" %}
 
 {% block content %}
-<section class="form-page">
+
+<section class="panel">
+    <h3>Adicionar Entrega</h3>
+    <p class="muted">Escolha o tipo de registro.</p>
+
+    <div class="modo-tabs">
+        <button type="button" class="modo-btn ativo" onclick="mostrarDiaPassado()">
+            📅 Registrar dia passado
+        </button>
+
+        <button type="button" class="modo-btn" onclick="mostrarRotaHoje()">
+            🚚 Iniciar rota de hoje
+        </button>
+    </div>
+</section>
+
+<section id="areaDiaPassado" class="form-page">
     <div class="panel form-panel">
-        <h3>Registrar pacotes do dia</h3>
-        <p class="muted">Se já existir registro nessa data, o sistema atualiza os valores.</p>
+        <h3>Registrar dia passado</h3>
 
         <form method="POST" class="form">
             <label>Data</label>
             <input type="date" name="data" required>
 
-            <label>Pacotes recebidos para distribuir</label>
-            <input type="number" name="recebidos" min="0" required placeholder="Ex: 120">
+            <label>Pacotes recebidos</label>
+            <input type="number" name="recebidos" min="0" required>
 
-            <label>Pacotes entregues no dia</label>
-            <input type="number" name="entregues" min="0" required placeholder="Ex: 118">
+            <label>Pacotes entregues</label>
+            <input type="number" name="entregues" min="0" required>
 
-            <button type="submit">Salvar Pacotes</button>
+            <button type="submit">Salvar Dia</button>
         </form>
     </div>
 </section>
+
+<section id="areaRotaHoje" class="form-page" style="display:none;">
+    <div class="panel form-panel">
+        <h3>Iniciar rota de hoje</h3>
+        <p class="muted">
+            Use essa opção quando estiver começando uma rota agora.
+        </p>
+
+        <form method="POST" action="{{ url_for('iniciar_rota') }}" class="form">
+            <label>Quantos pacotes você recebeu agora?</label>
+            <input type="number" name="recebidos" min="1" required>
+
+            <button type="submit">Iniciar Rota</button>
+        </form>
+    </div>
+</section>
+
+<script>
+function mostrarDiaPassado() {
+    document.getElementById("areaDiaPassado").style.display = "flex";
+    document.getElementById("areaRotaHoje").style.display = "none";
+
+    document.querySelectorAll(".modo-btn")[0].classList.add("ativo");
+    document.querySelectorAll(".modo-btn")[1].classList.remove("ativo");
+}
+
+function mostrarRotaHoje() {
+    document.getElementById("areaDiaPassado").style.display = "none";
+    document.getElementById("areaRotaHoje").style.display = "flex";
+
+    document.querySelectorAll(".modo-btn")[0].classList.remove("ativo");
+    document.querySelectorAll(".modo-btn")[1].classList.add("ativo");
+}
+</script>
+
 {% endblock %}

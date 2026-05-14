@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% set titulo = "Rotas em Curso" %}
+
+{% block content %}
+
+<section class="panel">
+    <h3>🚚 Rotas em Curso</h3>
+    <p class="muted">Finalize a rota que está aberta.</p>
+
+    {% if rota %}
+
+        <div class="finance-row">
+            <span>Data da rota</span>
+            <strong>{{ rota.data }}</strong>
+        </div>
+
+        <div class="finance-row">
+            <span>Pacotes recebidos</span>
+            <strong>{{ rota.recebidos }}</strong>
+        </div>
+
+        <form method="POST" class="form" style="margin-top:20px;">
+            <input type="hidden" name="rota_id" value="{{ rota.id }}">
+
+            <label>Quantos pacotes você entregou?</label>
+            <input type="number" name="entregues" min="0" max="{{ rota.recebidos }}" required>
+
+            <button type="submit">
+                Finalizar Rota
+            </button>
+        </form>
+
+    {% else %}
+
+        <div class="alert erro">
+            Nenhuma rota em curso encontrada.
+        </div>
+
+        <a href="{{ url_for('adicionar') }}" class="btn-small">
+            Iniciar nova rota
+        </a>
+
+    {% endif %}
+</section>
+
+{% endblock %}

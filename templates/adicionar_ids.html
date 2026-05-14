@@ -6,22 +6,70 @@
     <div class="panel form-panel">
         <h3>Adicionar IDs dos Pacotes</h3>
         <p class="muted">
-            Cole os IDs dos pacotes do dia. Use um ID por linha.
+            Escolha se deseja digitar os IDs manualmente ou escanear pacote por pacote.
         </p>
 
-        <form method="POST" class="form">
+        <div class="modo-tabs">
+            <button type="button" class="modo-btn ativo" onclick="mostrarManual()">
+                ✍️ Digitar IDs
+            </button>
+
+            <button type="button" class="modo-btn" onclick="mostrarScanner()">
+                📷 Escanear Pacotes
+            </button>
+        </div>
+
+        <form method="POST" class="form" id="formIds">
             <label>Data</label>
-            <input type="date" name="data" value="{{ data_selecionada }}" required>
+            <input type="date" name="data" id="dataInput" value="{{ data_selecionada }}" required>
 
-            <label>IDs dos pacotes</label>
-            <textarea
-                name="ids"
-                rows="15"
-                placeholder="Exemplo:&#10;BR123456789&#10;BR987654321&#10;BR555444333"
-                required
-            ></textarea>
+            <div id="areaManual">
+                <label>IDs dos pacotes</label>
+                <textarea
+                    name="ids"
+                    id="idsTextarea"
+                    rows="15"
+                    placeholder="Exemplo:&#10;46801939591&#10;46801939592&#10;46801939593"
+                ></textarea>
 
-            <button type="submit">Salvar IDs</button>
+                <p class="muted">
+                    Um ID por linha.
+                </p>
+            </div>
+
+            <div id="areaScanner" style="display:none;">
+                <label>Scanner de pacotes</label>
+
+                <div class="scanner-actions">
+                    <button type="button" onclick="iniciarScanner()">
+                        Iniciar câmera
+                    </button>
+
+                    <button type="button" onclick="pararScanner()" class="btn-danger">
+                        Parar câmera
+                    </button>
+                </div>
+
+                <div id="reader"></div>
+
+                <div class="scanner-info">
+                    <strong>Último ID lido:</strong>
+                    <span id="ultimoId">Nenhum</span>
+                </div>
+
+                <div class="scanner-info">
+                    <strong>Total escaneado:</strong>
+                    <span id="totalEscaneado">0</span>
+                </div>
+
+                <p class="muted">
+                    Os IDs escaneados serão adicionados automaticamente na lista manual.
+                </p>
+            </div>
+
+            <button type="submit">
+                Salvar IDs
+            </button>
         </form>
     </div>
 </section>
@@ -64,4 +112,101 @@
         </table>
     </div>
 </section>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<script>
+let scanner = null;
+let scannerRodando = false;
+let idsEscaneados = new Set();
+
+function mostrarManual() {
+    document.getElementById("areaManual").style.display = "block";
+    document.getElementById("areaScanner").style.display = "none";
+
+    document.querySelectorAll(".modo-btn")[0].classList.add("ativo");
+    document.querySelectorAll(".modo-btn")[1].classList.remove("ativo");
+}
+
+function mostrarScanner() {
+    document.getElementById("areaManual").style.display = "block";
+    document.getElementById("areaScanner").style.display = "block";
+
+    document.querySelectorAll(".modo-btn")[0].classList.remove("ativo");
+    document.querySelectorAll(".modo-btn")[1].classList.add("ativo");
+}
+
+function extrairId(decodedText) {
+    try {
+        const obj = JSON.parse(decodedText);
+
+        if (obj.id) {
+            return obj.id;
+        }
+    } catch (e) {}
+
+    return decodedText;
+}
+
+function adicionarIdNaLista(id) {
+    id = String(id).trim();
+
+    if (!id) {
+        return;
+    }
+
+    if (idsEscaneados.has(id)) {
+        document.getElementById("ultimoId").innerText = "Duplicado ignorado: " + id;
+        return;
+    }
+
+    idsEscaneados.add(id);
+
+    const textarea = document.getElementById("idsTextarea");
+
+    let valorAtual = textarea.value.trim();
+
+    if (valorAtual) {
+        textarea.value = valorAtual + "\\n" + id;
+    } else {
+        textarea.value = id;
+    }
+
+    document.getElementById("ultimoId").innerText = id;
+    document.getElementById("totalEscaneado").innerText = idsEscaneados.size;
+}
+
+function iniciarScanner() {
+    if (scannerRodando) {
+        return;
+    }
+
+    scanner = new Html5Qrcode("reader");
+
+    scanner.start(
+        { facingMode: "environment" },
+        {
+            fps: 10,
+            qrbox: 250
+        },
+        function(decodedText, decodedResult) {
+            const id = extrairId(decodedText);
+            adicionarIdNaLista(id);
+        },
+        function(errorMessage) {}
+    ).then(() => {
+        scannerRodando = true;
+    }).catch(err => {
+        alert("Não foi possível abrir a câmera: " + err);
+    });
+}
+
+function pararScanner() {
+    if (scanner && scannerRodando) {
+        scanner.stop().then(() => {
+            scannerRodando = false;
+        });
+    }
+}
+</script>
 {% endblock %}

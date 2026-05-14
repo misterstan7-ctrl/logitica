@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% set titulo = "Scanner" %}
+
+{% block content %}
+
+<section class="panel">
+
+    <div class="panel-header">
+        <div>
+            <h3>📷 Scanner Logístico</h3>
+            <p class="muted">
+                Escolha o tipo de leitura.
+            </p>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top:20px;">
+
+        <a href="{{ url_for('scanner_saca') }}"
+           class="scanner-card">
+
+            <h2>📦 Ler Saca</h2>
+
+            <p>
+                Tenta ler o QR Code da saca do Mercado Livre.
+            </p>
+
+        </a>
+
+        <a href="{{ url_for('scanner_pacotes') }}"
+           class="scanner-card">
+
+            <h2>🔎 Ler Pacotes</h2>
+
+            <p>
+                Escaneia os pacotes individualmente.
+            </p>
+
+        </a>
+
+    </div>
+
+</section>
+
+{% endblock %}

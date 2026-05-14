@@ -46,6 +46,27 @@ def criar_banco():
             data_hora TEXT NOT NULL
         )
     """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS rotas (
+        id SERIAL PRIMARY KEY,
+        data TEXT NOT NULL,
+        recebidos INTEGER NOT NULL,
+        entregues INTEGER DEFAULT 0,
+        status TEXT NOT NULL,
+        criado_em TEXT NOT NULL,
+        finalizado_em TEXT
+    )
+""")
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS pacotes_nao_entregues (
+        id SERIAL PRIMARY KEY,
+        data TEXT NOT NULL,
+        codigo TEXT NOT NULL,
+        rota_id INTEGER,
+        criado_em TEXT NOT NULL
+    )
+""")
 
     conn.commit()
     cur.close()
@@ -399,3 +420,97 @@ def dados_relatorio(periodo="mes", inicio=None, fim=None):
         "totais": totais,
         "linhas": linhas
     }
+
+def criar_rota_hoje(data, recebidos):
+    conn = conectar()
+    cur = conn.cursor()
+
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cur.execute("""
+        INSERT INTO rotas (data, recebidos, entregues, status, criado_em)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING id
+    """, (data, recebidos, 0, "em_curso", agora))
+
+    rota_id = cur.fetchone()["id"]
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return rota_id
+
+
+def buscar_rota_em_curso():
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM rotas
+        WHERE status = %s
+        ORDER BY id DESC
+        LIMIT 1
+    """, ("em_curso",))
+
+    rota = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    return rota
+
+
+def finalizar_rota(rota_id, entregues):
+    conn = conectar()
+    cur = conn.cursor()
+
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cur.execute("""
+        UPDATE rotas
+        SET entregues = %s,
+            status = %s,
+            finalizado_em = %s
+        WHERE id = %s
+    """, (entregues, "finalizada", agora, rota_id))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def salvar_pacote_nao_entregue(data, codigo, rota_id=None):
+    conn = conectar()
+    cur = conn.cursor()
+
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cur.execute("""
+        INSERT INTO pacotes_nao_entregues (data, codigo, rota_id, criado_em)
+        VALUES (%s, %s, %s, %s)
+    """, (data, codigo, rota_id, agora))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def listar_nao_entregues_por_data(data):
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT *
+        FROM pacotes_nao_entregues
+        WHERE data = %s
+        ORDER BY id DESC
+    """, (data,))
+
+    dados = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return dados

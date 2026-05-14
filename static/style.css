@@ -508,3 +508,66 @@ textarea {
 textarea:focus {
     border-color: #2563eb;
 }
+
+.scanner-card{
+    background:#172554;
+    padding:25px;
+    border-radius:20px;
+    text-decoration:none;
+    color:white;
+    width:300px;
+    transition:0.2s;
+}
+
+.scanner-card:hover{
+    transform:scale(1.03);
+    background:#1e3a8a;
+}
+
+.modo-tabs {
+    display: flex;
+    gap: 12px;
+    margin: 18px 0;
+    flex-wrap: wrap;
+}
+
+.modo-btn {
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: #0f172a;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.modo-btn.ativo {
+    background: #2563eb;
+}
+
+.scanner-actions {
+    display: flex;
+    gap: 10px;
+    margin: 12px 0;
+    flex-wrap: wrap;
+}
+
+.btn-danger {
+    background: #dc2626 !important;
+}
+
+#reader {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 15px;
+    background: #020617;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.scanner-info {
+    margin-top: 12px;
+    padding: 12px;
+    background: #0f172a;
+    border-radius: 10px;
+}

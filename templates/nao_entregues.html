@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% set titulo = "Pacotes Não Entregues" %}
+
+{% block content %}
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h3>📦 Pacotes Não Entregues</h3>
+            <p class="muted">
+                Escaneie ou digite os pacotes que voltaram.
+            </p>
+        </div>
+    </div>
+
+    <form method="POST" class="form">
+
+        <input type="hidden" name="rota_id" value="{{ rota_id }}">
+
+        <label>Data</label>
+        <input type="date" name="data" value="{{ data }}" required>
+
+        <label>Pacotes não entregues</label>
+
+        <textarea
+            name="ids"
+            id="idsTextarea"
+            rows="12"
+            placeholder="Um ID por linha"
+        ></textarea>
+
+        <div class="scanner-actions">
+
+            <button type="button" onclick="iniciarScanner()">
+                📷 Escanear Pacotes
+            </button>
+
+            <button type="button"
+                    class="btn-danger"
+                    onclick="pararScanner()">
+
+                Parar Scanner
+            </button>
+
+        </div>
+
+        <div id="reader"></div>
+
+        <div class="scanner-info">
+            <strong>Último pacote:</strong>
+            <span id="ultimoId">Nenhum</span>
+        </div>
+
+        <div class="scanner-info">
+            <strong>Total escaneado:</strong>
+            <span id="totalEscaneado">0</span>
+        </div>
+
+        <button type="submit">
+            Salvar Pacotes Não Entregues
+        </button>
+
+    </form>
+
+</section>
+
+<section class="panel">
+
+    <div class="panel-header">
+        <div>
+            <h3>Pacotes Registrados</h3>
+            <p class="muted">
+                Pacotes que voltaram no dia.
+            </p>
+        </div>
+
+        <strong>Total: {{ dados|length }}</strong>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+
+            <thead>
+                <tr>
+                    <th>ID do Pacote</th>
+                    <th>Data</th>
+                    <th>Registrado em</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for item in dados %}
+
+                <tr>
+                    <td>{{ item.codigo }}</td>
+                    <td>{{ item.data }}</td>
+                    <td>{{ item.criado_em }}</td>
+                </tr>
+
+                {% else %}
+
+                <tr>
+                    <td colspan="3">
+                        Nenhum pacote registrado.
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+    </div>
+
+</section>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<script>
+
+let scanner = null;
+let scannerRodando = false;
+let idsEscaneados = new Set();
+
+function extrairId(decodedText) {
+
+    try {
+
+        const obj = JSON.parse(decodedText);
+
+        if (obj.id) {
+            return obj.id;
+        }
+
+    } catch (e) {}
+
+    return decodedText;
+}
+
+function adicionarId(id) {
+
+    id = String(id).trim();
+
+    if (!id) return;
+
+    if (idsEscaneados.has(id)) {
+
+        document.getElementById("ultimoId").innerText =
+            "Duplicado ignorado: " + id;
+
+        return;
+    }
+
+    idsEscaneados.add(id);
+
+    const textarea =
+        document.getElementById("idsTextarea");
+
+    let valorAtual = textarea.value.trim();
+
+    if (valorAtual) {
+
+        textarea.value =
+            valorAtual + "\\n" + id;
+
+    } else {
+
+        textarea.value = id;
+    }
+
+    document.getElementById("ultimoId").innerText = id;
+
+    document.getElementById("totalEscaneado").innerText =
+        idsEscaneados.size;
+}
+
+function iniciarScanner() {
+
+    if (scannerRodando) return;
+
+    scanner = new Html5Qrcode("reader");
+
+    scanner.start(
+        { facingMode: "environment" },
+
+        {
+            fps: 10,
+            qrbox: 250
+        },
+
+        function(decodedText) {
+
+            const id = extrairId(decodedText);
+
+            adicionarId(id);
+        },
+
+        function(errorMessage) {}
+    )
+
+    .then(() => {
+
+        scannerRodando = true;
+
+    })
+
+    .catch(err => {
+
+        alert(
+            "Erro ao abrir câmera: " + err
+        );
+    });
+}
+
+function pararScanner() {
+
+    if (scanner && scannerRodando) {
+
+        scanner.stop().then(() => {
+
+            scannerRodando = false;
+
+        });
+    }
+}
+
+</script>
+
+{% endblock %}
